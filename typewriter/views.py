@@ -29,10 +29,22 @@ def parse(request):
         fps = int(json_data['fps'])
         inline = json_data['inline']
 
-        tw.setRawString(pattern)
+        tw.setPattern(pattern)
         tw.setFrameRate(fps)
 
-        tw.parse()
+        res = tw.parse()
+        if res < 0:
+            frame_dict = {
+                'result' : 'failed',
+                'fps' : fps,
+                'frames' : -res-1,
+                'dump': pattern.decode()
+            }
+
+            return HttpResponse(
+                content=DjangoJSONEncoder().encode(frame_dict),
+                content_type='application/json',
+                status=400)
 
         tw_dump = {}
 
@@ -42,18 +54,25 @@ def parse(request):
             f += 1
 
         frame_dict = {
-                'name' : 'typewriter',
-                'fps' : fps,
-                'frames' : tw.count(),
-                'dump': tw_dump
-            }
+            'result' : 'ok',
+            'fps' : fps,
+            'frames' : tw.count(),
+            'dump': tw_dump
+        }
 
         return HttpResponse(
             content=DjangoJSONEncoder().encode(frame_dict),
             content_type='application/json',
             status=200)
     else:
+        frame_dict = {
+            'result' : 'invalid',
+            'fps' : fps,
+            'frames' : 0,
+            'dump': ""
+        }
+
         return HttpResponse(
-            content=DjangoJSONEncoder().encode({}),
+            content=DjangoJSONEncoder().encode(frame_dict),
             content_type='application/json',
             status=400)

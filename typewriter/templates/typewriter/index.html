@@ -159,6 +159,16 @@ function display_render() {
     d_cnt = d_cnt + 1;
 }
 
+function parsing_error(response)
+{
+    var pos = response['frames'];
+    var str = response['dump'];
+
+    var line = "<h3>Parsing error!</h3><p>Position: "+pos+"</p>";
+    line += "<p>"+ str.substr(0, pos) + "</p>";
+    document.getElementById("parsing_output").innerHTML=line;
+}
+
 function parsetext() {
     var arr = {
         'pattern' : document.getElementById("pattern").value,
@@ -169,13 +179,23 @@ function parsetext() {
     var r = new XMLHttpRequest();
     r.open("POST", '{% url 'typewriter:parse' %}', true);
     r.onreadystatechange = function () {
-        if (r.readyState != 4 || r.status != 200) return;
+        if (r.readyState != 4) return;
+        if (r.status == 400)
+        {
             var msg = JSON.parse(r.responseText);
-            d_data = msg['dump'];
-            d_length = msg['frames'];
-            d_fps = msg['fps'];
-            d_cnt = 0;
-            timer_id = setInterval("display_render()", 1000/d_fps);
+            if (msg['result'] == 'failed')
+            {
+                parsing_error(msg);
+                return;
+            }
+        }
+        if (r.status != 200) return
+        var msg = JSON.parse(r.responseText);
+        d_data = msg['dump'];
+        d_length = msg['frames'];
+        d_fps = msg['fps'];
+        d_cnt = 0;
+        timer_id = setInterval("display_render()", 1000/d_fps);
     };
     r.setRequestHeader('X-CSRFToken', csrftoken); 
     r.send(JSON.stringify(arr));
