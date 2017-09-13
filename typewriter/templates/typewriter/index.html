@@ -7,7 +7,8 @@
 <meta charset="utf-8">
 <title>TypeWriter parser</title>
 <meta name="description" content="TypeWriter parser">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <style>
 body {
   margin: 0 auto;
@@ -53,16 +54,12 @@ textarea {
     height: 2em;
 }
 
-#progress {
-    height: 2em;
-    width: 100%;
-    background: #598ebe;
-    margin-top: 20px;
+#progress_w3 {
+    width: 0%;
 }
 
 #timer {
     display: inline;
-    color: red;
     text-align: right;
     float: right;
 }
@@ -155,7 +152,8 @@ function display_render() {
 
     document.getElementById("timer").innerHTML=times;
     document.getElementById("parsing_output").innerHTML=line;
-    var s = document.getElementById("progress").style
+
+    var s = document.getElementById("progress_w3").style
     s.width = parseInt(t_progress * 100)+'%';
 
     d_cnt = d_cnt + 1;
@@ -309,7 +307,9 @@ Each macro starts with : followed by the letter containing operation, next optio
     </div>
 </div>
 <div id="display">
-    <div id="progress">&nbsp;</div>
+    <div class="w3-light-grey w3-round-xlarge">
+    <div id="progress_w3" class="w3-blue w3-round-large">&nbsp;</div>
+    </div>
     <div id="timer" />
 </div>
 

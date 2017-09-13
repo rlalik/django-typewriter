@@ -19,34 +19,9 @@ def index(request):
         context,
     )
 
-def frame(request):
-    global tw
-
-    if tw == NoneType:
-        tw = PyTypeWriter
-
-    frame = request.POST.get('frame')
-    frame_dict = {
-        'name' : 'typewriter',
-        'frame' : frame,
-        'text': tw.render(frame)
-    }
-    res = { 'response' : [ frame_dict] }
-
-    super(UploadFinished, self).__init__(
-        content=DjangoJSONEncoder().encode(res),
-        content_type='application/json',
-        status=200,
-        *args, **kwargs
-    )
-
 def parse(request):
-    #global tw
-
-    #if tw == NoneType:
     tw = PyTypeWriter()
 
-    print(request.body)
     if request.method == 'POST':
         json_data = json.loads(request.body)
 
@@ -58,7 +33,6 @@ def parse(request):
         tw.setFrameRate(fps)
 
         tw.parse()
-        tw.debug()
 
         tw_dump = {}
 
