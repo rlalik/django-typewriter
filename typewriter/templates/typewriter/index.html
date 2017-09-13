@@ -1,0 +1,320 @@
+{% load static %}
+
+<!DOCTYPE HTML>
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TypeWriter parser</title>
+<meta name="description" content="TypeWriter parser">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  margin: 0 auto;
+  padding: 1em;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, sans-serif;
+  font-size: 1em;
+  line-height: 1.4em;
+  color: #000;
+}
+
+span {
+  display: inline-block;
+  min-width: 120px;
+  vertical-align: top;
+  margin: 0 20px 0 0;
+}
+
+input, textarea {
+  min-width: 120px;
+  min-height: 1em;
+  font-size: 1em;
+  vertical-align: middle;
+}
+
+textarea {
+    font-size: 120%;
+}
+#parse {
+    padding: 20px;
+    min-width: 300px;
+    margin: 20px 0px 20px 0px;
+}
+
+#parsing_output {
+    min-height: 5em;
+    white-space: pre-wrap;
+    margin: 10px auto;
+    border: 1px solid black;
+    padding: 2em;
+}
+
+#display {
+    height: 2em;
+}
+
+#progress {
+    height: 2em;
+    width: 100%;
+    background: #598ebe;
+    margin-top: 20px;
+}
+
+#timer {
+    display: inline;
+    color: red;
+    text-align: right;
+    float: right;
+}
+
+#form {
+    max-width: 50%;
+    display: inline-block;
+}
+
+#patterns {
+    min-width: 20%;
+    vertical-align: top;
+    text-align: center;
+    display: inline-block;
+}
+
+input.templates {
+    display: block;
+    width: 100%;
+    height: 2em;
+    margin: 5px 0px 5px 0px;
+}
+
+#manual {
+    column-count: 1;
+    column-rule: 1px solid lightblue;
+    column-gap: 40px;
+    font-size: 90%;
+    line-height: 100%;
+}
+
+pre {
+    display: inline;
+}
+</style>
+
+<script>
+function parse_cookies() {
+    var cookies = {};
+    if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(function (c) {
+            var m = c.trim().match(/(\w+)=(.*)/);
+            if(m !== undefined) {
+                cookies[m[1]] = decodeURIComponent(m[2]);
+            }
+        });
+    }
+    return cookies;
+}
+var cookies = parse_cookies();
+
+var csrftoken = cookies['csrftoken'];
+
+var timer_id = null;
+var d_cnt = 0;
+var d_fps = 0;
+var d_length = 0;
+var d_data = null;
+
+String.prototype.format = function () {
+  var args = arguments;
+  return this.replace(/\{\{|\}\}|\{(\d+)\}/g, function (m, n) {
+    if (m == "{{") { return "{"; }
+    if (m == "}}") { return "}"; }
+    return args[n];
+  });
+};
+
+function display_render() {
+    if (d_cnt == d_length && timer_id)
+        clearInterval(timer_id)
+
+    if (d_data == null)
+        return;
+
+    var line = d_data[d_cnt];
+
+    var sec = d_fps;
+    var min = 60 * d_fps;
+
+    var m_frames = d_cnt % d_fps;
+    var m_secs = parseInt((d_cnt % min) / sec);
+    var m_mins = parseInt(d_cnt / min);
+    var t_frames = ("00"+m_frames).slice(-3);
+    var t_secs = ("00"+m_secs).slice(-2);
+    var t_mins = ("00"+m_mins).slice(-3);
+    var times = "{0}:{1}:{2}".format(t_mins, t_secs, t_frames);
+
+    var t_progress = d_cnt/d_length;
+
+    document.getElementById("timer").innerHTML=times;
+    document.getElementById("parsing_output").innerHTML=line;
+    var s = document.getElementById("progress").style
+    s.width = parseInt(t_progress * 100)+'%';
+
+    d_cnt = d_cnt + 1;
+}
+
+function parsetext() {
+    var arr = {
+        'pattern' : document.getElementById("pattern").value,
+        'fps' : document.getElementById("fps").value,
+        'inline' : 1
+    };
+
+    var r = new XMLHttpRequest();
+    r.open("POST", '{% url 'typewriter:parse' %}', true);
+    r.onreadystatechange = function () {
+        if (r.readyState != 4 || r.status != 200) return;
+            var msg = JSON.parse(r.responseText);
+            d_data = msg['dump'];
+            d_length = msg['frames'];
+            d_fps = msg['fps'];
+            d_cnt = 0;
+            timer_id = setInterval("display_render()", 1000/d_fps);
+    };
+    r.setRequestHeader('X-CSRFToken', csrftoken); 
+    r.send(JSON.stringify(arr));
+}
+
+function set_lorem_c()
+{
+    document.getElementById("pattern").value = `:c{Lorem ipsum dolor sit amet, mea
+no maluisset conclusionemque,
+        mei alii labore apeirian an,
+et est dicta virtute. Ius
+ quando ridens omnesque te,
+inermis detraxit posidonium cu
+per, vel at harum graeco.
+Lobortis accommodare qui eu.
+Eum apeirian posidonium at,
+vix ipsum mucius ex, sea noster
+percipitur honestatis no. Eu
+simul decore vim, voluptua
+singulis at has, nec fabulas
+docendi ad.}`;
+}
+
+function set_lorem_w()
+{
+    document.getElementById("pattern").value = `:w{Lorem ipsum dolor sit amet, mea
+no maluisset conclusionemque,
+        mei alii labore apeirian an,
+et est dicta virtute. Ius
+ quando ridens omnesque te,
+inermis detraxit posidonium cu
+per, vel at harum graeco.
+Lobortis accommodare qui eu.
+Eum apeirian posidonium at,
+vix ipsum mucius ex, sea noster
+percipitur honestatis no. Eu
+simul decore vim, voluptua
+singulis at has, nec fabulas
+docendi ad.}`;
+}
+
+function set_lorem_l()
+{
+    document.getElementById("pattern").value = `:l{Lorem ipsum dolor sit amet, mea
+no maluisset conclusionemque,
+        mei alii labore apeirian an,
+et est dicta virtute. Ius
+ quando ridens omnesque te,
+inermis detraxit posidonium cu
+per, vel at harum graeco.
+Lobortis accommodare qui eu.
+Eum apeirian posidonium at,
+vix ipsum mucius ex, sea noster
+percipitur honestatis no. Eu
+simul decore vim, voluptua
+singulis at has, nec fabulas
+docendi ad.}`;
+}
+
+function clear_form()
+{
+    document.getElementById("pattern").value = "";
+}
+
+</script>
+
+</head>
+<body>
+
+<details id="manual">
+<summary>Manual (click to expand)</summary>
+<p>
+Demonstration page for TypeWriter engine. See <a href="https://github.com/rlalik/TypeWriter">TypeWriter</a> at GitHub for more detailed description.
+
+<h3>Usage</h3>
+
+<h4>Options</h4>
+
+Options must be enclosed in <pre>[]</pre> brackets and follow directly control sequence or macro. Currently there are following options supported:<br>
+<ul>
+<li> <pre><em>n</em></pre> --- number, its usage may vary between various control sequences and commands</li>
+<li> <pre><em>n</em>f</pre> --- number of frames,</li>
+<li> <pre><em>n</em>s</pre> --- number of steps.</li>
+</ul>
+
+<h4>Control sequences</h4>
+
+In below, each presence of <pre>[...]</pre> denotes which options are accepted and are optional (non-accepted options are ignored). Non of the sequences have mandatory options.
+
+<ul>
+<li><pre>,[<em>n</em>,<em>n</em>f,<em>n</em>s]</pre> -- next frame(s), available options <em>n</em>, <em>n</em>f (skip <em>n</em> frames), <em>n</em>s (skip <em>n</em> steps, equivalent of <em>n</em>*fps frames), frames and steps are additive,</li>
+<li><pre>>[<em>n</em>,<em>n</em>s]</pre> -- next step(s), available options <em>n</em>, <em>n</em>s (skip <em>n</em> steps, equivalent of <em>n</em>*fps frames), steps <em>n</em>s if passed are ignored, <em>n</em> and <em>n</em>s are additive,</li>
+<li><pre><[<em>n</em>]<em>text</em></pre> -- delete string from the last frame (multiple <pre><</pre> delete more frames), available options: <em>n</em> - delete n-last non-empty frames, can be followed by a text but any text before <pre><</pre> will be ignored,</li>
+<li><pre>\</pre> -- escapes any follwoing character from being interpreted as control sequence or macro, for <em>\n</em> and <em>\t</em> inserts newline or tabular.</li>
+</ul>
+
+<h4>Macros</h4>
+
+Each macro starts with : followed by the letter containing operation, next options [] can be passed and macro must contain pair of {} brackets with the macro content inside.
+
+<ul>
+<li><pre>:c[<em>n</em>,<em>n</em>f,<em>n</em>s]{<em>text</em>}</pre> -- split text into characters and insert every <em>n</em>+<em>n</em>s + <em>n</em>s*fps frames (if options are not given, default is 1 frame), preserves newline <em>\n</em> and tabulators <em>\t</em>,</li>
+<li><pre>:w[<em>n</em>,<em>n</em>f,<em>n</em>s]{<em>text</em>}</pre> -- split text into words, rest like for characters,</li>
+<li><pre>:l[<em>n</em>,<em>n</em>f,<em>n</em>s]{<em>text</em>}</pre> -- split text into lines, rest like for characters.</li>
+</ul>
+</div>
+</p>
+</details>
+
+<div class="container">
+    <h1>{{ settings.page_title }}</h1>
+    <div id="form">
+<!--     <form id="typewriter" method="POST" enctype="multipart/form-data"> -->
+        <div>
+        <span>Pattern</span><textarea id="pattern" name="form_pattern" rows="15" cols="80">E,x,a,m,p,l,e</textarea>
+        </div>
+        <div><span>Frame rate</span><input id="fps" type="input" name="fps" value="25" /></div>
+<!--        <div><span>Render inline</span><input type="checkbox" name="inline" value="inline" checked></input></div>-->
+        <div><span></span><input id="parse" type="button" onclick="parsetext()" value="GO!" /></div>
+<!--         {% csrf_token %} -->
+<!--     </form> -->
+    </div>
+    <div id="patterns">
+        <input class="templates" type="button" onclick="clear_form()" value="Clear form" />
+        <p>Templates</p>
+        <input class="templates" type="button" onclick="set_lorem_c()" value="Parse Lorem by char" />
+        <input class="templates" type="button" onclick="set_lorem_w()" value="Parse Lorem by word" />
+        <input class="templates" type="button" onclick="set_lorem_l()" value="Parse Lorem by line" />
+    </div>
+</div>
+<div id="display">
+    <div id="progress">&nbsp;</div>
+    <div id="timer" />
+</div>
+
+<p>Result will be rendered here:</p>
+<div id="parsing_output" />
+
+</body>
+</html>
